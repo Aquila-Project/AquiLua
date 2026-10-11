@@ -62,7 +62,19 @@ ScriptId Runtime::load(const std::string &filename) {
 		return script_id;
 	}
 
-	LUA_CALL_CHECK_RESULT(m_state, lua_pcall(m_state, 0, 1, 0)); // get whatever the fuck the file returns and keep it
+	status = lua_pcall(m_state, 0, 1, 0); // get whatever the fuck the file returns and keep it. stack : [M] or [error]
+	if (status != LUA_OK) {
+		fprintf(stderr, "%s\n", lua_tostring(m_state, -1));
+		lua_pop(m_state, 1); // stack : []
+		return script_id;
+	}
+
+	if (!lua_istable(m_state, -1)) {
+		fprintf(stderr, "%s must return a table of functions (return M).\n", filename.c_str());
+		lua_pop(m_state, 1); // stack : []
+		return script_id;
+	}
+
 	int ticket = lua_ref(m_state, -1); // get the id
 	lua_pop(m_state, 1); // pop whats on the stack
 
