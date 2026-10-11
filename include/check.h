@@ -14,6 +14,7 @@
 
 #include "lua.h"
 #include "lualib.h"
+#include "userdata.h"
 
 #include <concepts>
 #include <cstddef>
@@ -46,6 +47,11 @@ template <std::same_as<std::string> T> T check(lua_State *state, int index) {
 	size_t length = 0;
 	const char *value = luaL_checklstring(state, index, &length);
 	return std::string(value, length);
+}
+
+// Userdata types, see UserType in userdata.h. Returns a copy, so a T & parameter won't compile: take T or const T &.
+template <Userdata T> T check(lua_State *state, int index) {
+	return *check_userdata<T>(state, index, UserType<T>::name);
 }
 
 } // namespace aquiLua

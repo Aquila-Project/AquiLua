@@ -13,6 +13,7 @@
 #pragma once
 
 #include "lua.h"
+#include "userdata.h"
 
 #include <concepts>
 #include <cstddef>
@@ -61,6 +62,11 @@ inline void push(lua_State *state, std::string_view value) {
 
 inline void push(lua_State *state, lua_CFunction function) {
 	lua_pushcfunction(state, function, nullptr);
+}
+
+// Userdata types, see UserType in userdata.h. Luau gets its own copy of value.
+template <Userdata T> void push(lua_State *state, T value) {
+	new_userdata(state, UserType<T>::name, value);
 }
 
 } // namespace aquiLua

@@ -18,11 +18,13 @@
 #include "binding.h"
 #include "push.h"
 #include "get.h"
+#include "userdata.h"
 
 #include "utils/macros.h"
 
 #include <fstream>
 #include <optional>
+#include <initializer_list>
 #include <type_traits>
 #include <unordered_map>
 
@@ -55,6 +57,16 @@ class Runtime {
 	void destroy_vm();
 
 	template <auto Fn> void bind(const std::string &name) { register_function(name, wrapper<Fn>); }
+
+	// Fn's first parameter (a C &) receives *context
+	template <auto Fn> void bind(const std::string &name, typename ContextOf<decltype(Fn)>::type *context) {
+		register_function(name, wrapper_with_context<Fn>, context);
+	}
+
+	// each method gets context as upvalue 1. a type can only be registered once
+	template <Userdata T> bool register_type(std::initializer_list<luaL_Reg> methods, void *context = nullptr) {
+		return register_type(UserType<T>::name, methods, context);
+	}
 
 	ScriptId load(const std::string &filename);
 
@@ -104,7 +116,10 @@ class Runtime {
 	}
 
   private:
-	void register_function(const std::string &name, lua_CFunction function);
+	void register_function(const std::string &name, lua_CFunction function, void *context = nullptr);
+	bool register_type(const std::string &name, std::initializer_list<luaL_Reg> methods, void *context);
+
+	void push_function(lua_CFunction function, const char *name, void *context);
 
 	lua_State *m_state = nullptr;
 	std::unordered_map<uint32_t, int> m_script;

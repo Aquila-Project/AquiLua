@@ -27,12 +27,26 @@ say("C++ function called from Luau",2,3)
 local sum = test(2.54,2.32);
 print("C++ function called from Luau", sum)
 
+local c = get_counter(1)
+print(c, typeof(c))
+
+c:increment()
+c:increment()
+
+print(c:get())
+
+print(pcall(c.get, 42))
+
 local M = {}
 
 function M.damage(amount: number): number
 	player.health = player.health - amount
 	print("Luau: " .. describe(player))
 	return player.health
+end
+
+function M.bump()
+	c:increment()
 end
 
 return M

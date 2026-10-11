@@ -32,9 +32,39 @@ bool Runtime::create_vm() {
 	return false;
 }
 
-void Runtime::register_function(const std::string &name, lua_CFunction function) {
-	lua_pushcfunction(m_state, function, name.c_str());
-	lua_setglobal(m_state, name.c_str());
+void Runtime::push_function(lua_CFunction function, const char *name, void *context) {
+	if (context != nullptr) {
+		lua_pushlightuserdata(m_state, context); // just a raw pointer, lua doesnt own it. stack : [context]
+		lua_pushcclosure(m_state, function, name, 1); // glue the context to the function. stack : [fn]
+	} else {
+		lua_pushcfunction(m_state, function, name); // stack : [fn]
+	}
+}
+
+void Runtime::register_function(const std::string &name, lua_CFunction function, void *context) {
+	push_function(function, name.c_str(), context); // stack : [fn]
+	lua_setglobal(m_state, name.c_str()); // stack : []
+}
+
+bool Runtime::register_type(const std::string &name, std::initializer_list<luaL_Reg> methods, void *context) {
+	if (!luaL_newmetatable(m_state, name.c_str())) { // name taken, it pushed the old one. stack : [metatable]
+		fprintf(stderr, "Type %s is already registered.\n", name.c_str());
+		lua_pop(m_state, 1); // stack : []
+		return false;
+	}
+
+	lua_newtable(m_state); // stack : [metatable, methods]
+	for (const luaL_Reg &method : methods) {
+		push_function(method.func, method.name, context); // stack : [metatable, methods, fn]
+		lua_setfield(m_state, -2, method.name); // stack : [metatable, methods]
+	}
+	lua_setfield(m_state, -2, "__index"); // stack : [metatable] and mt.__index = methods
+
+	lua_pushstring(m_state, name.c_str()); // stack : [metatable, name]
+	lua_setfield(m_state, -2, "__type"); // stack : [metatable] and mt.__type = name, so typeof() knows it
+
+	lua_pop(m_state, 1); // its in the registry now, under name. stack : []
+	return true;
 }
 
 void Runtime::destroy_vm() {
