@@ -14,6 +14,7 @@
 
 #include "lua.h"
 #include "lualib.h"
+#include "converter.h"
 #include "userdata.h"
 
 #include <concepts>
@@ -52,6 +53,10 @@ template <std::same_as<std::string> T> T check(lua_State *state, int index) {
 // Userdata types, see UserType in userdata.h. Returns a copy, so a T & parameter won't compile: take T or const T &.
 template <Userdata T> T check(lua_State *state, int index) {
 	return *check_userdata<T>(state, index, UserType<T>::name);
+}
+
+template <Convertible T> T check(lua_State *state, int index) {
+	return Converter<T>::check(state, index);
 }
 
 } // namespace aquiLua

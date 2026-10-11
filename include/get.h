@@ -13,6 +13,7 @@
 #pragma once
 
 #include "lua.h"
+#include "converter.h"
 
 #include <concepts>
 #include <cstddef>
@@ -45,6 +46,10 @@ template <std::same_as<std::string> T> T get(lua_State *state, int index) {
 	size_t length = 0;
 	const char *value = lua_tolstring(state, index, &length);
 	return value != nullptr ? std::string(value, length) : std::string();
+}
+
+template <Convertible T> T get(lua_State *state, int index) {
+	return Converter<T>::get(state, index);
 }
 
 } // namespace aquiLua

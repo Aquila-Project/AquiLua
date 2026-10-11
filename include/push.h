@@ -13,6 +13,7 @@
 #pragma once
 
 #include "lua.h"
+#include "converter.h"
 #include "userdata.h"
 
 #include <concepts>
@@ -67,6 +68,10 @@ inline void push(lua_State *state, lua_CFunction function) {
 // Userdata types, see UserType in userdata.h. Luau gets its own copy of value.
 template <Userdata T> void push(lua_State *state, T value) {
 	new_userdata(state, UserType<T>::name, value);
+}
+
+template <Convertible T> void push(lua_State *state, const T &value) {
+	Converter<T>::push(state, value);
 }
 
 } // namespace aquiLua
