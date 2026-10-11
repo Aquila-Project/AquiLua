@@ -25,13 +25,13 @@ namespace aquiLua {
 		}                                                                                       \
 	} while (0)
 
-// AQUILUA_BIND(runtime, say) or AQUILUA_BIND(runtime, get_counter, &counters).
+// AQUILUA_BIND(runtime, say), AQUILUA_BIND(runtime, say, "doc") or AQUILUA_BIND(runtime, get_counter, &counters, "doc").
 // the Luau name is the C++ name
 #define AQUILUA_BIND(runtime, fn, ...) (runtime).bind<fn>(#fn __VA_OPT__(, ) __VA_ARGS__)
 
-// AQUILUA_METHOD(check_counter, Counter, increment),
+// AQUILUA_METHOD(check_counter, Counter, increment) or AQUILUA_METHOD(check_counter, Counter, increment, "doc"),
 // for the list given to register_type
-#define AQUILUA_METHOD(resolve, type, fn) aquiLua::make_method<resolve, &type::fn>(#fn)
+#define AQUILUA_METHOD(resolve, type, fn, ...) aquiLua::make_method<resolve, &type::fn>(#fn __VA_OPT__(, ) __VA_ARGS__)
 
 // AQUILUA_USERTYPE(CounterHandle, "Counter"), at global scope
 #define AQUILUA_USERTYPE(type, lua_name)              \

@@ -21,7 +21,7 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <utility>
+#include <vector>
 
 namespace aquiLua {
 
@@ -65,40 +65,36 @@ template <Convertible T> const char *luau_type() {
 	return Converter<T>::luau_type;
 }
 
-// "(first, Args...) -> R". first is for a method's self
-template <typename R, typename... Args> std::string luau_signature(std::string first = {}) {
-	std::string params = std::move(first);
-	auto add = [&params](const char *type) {
-		if (!params.empty()) {
-			params += ", ";
-		}
-		params += type;
-	};
-	(add(luau_type<std::remove_cvref_t<Args>>()), ...);
+// the Luau types a C++ function takes and returns
+struct LuauSignature {
+	std::vector<std::string> params;
+	std::string result; // "()" when it returns nothing
+};
 
-	if constexpr (std::is_void_v<R>) {
-		return "(" + params + ") -> ()";
-	} else {
-		return "(" + params + ") -> " + luau_type<std::remove_cvref_t<R>>();
+template <typename R, typename... Args> LuauSignature make_signature() {
+	LuauSignature signature{ .params = { luau_type<std::remove_cvref_t<Args>>()... }, .result = "()" };
+	if constexpr (!std::is_void_v<R>) {
+		signature.result = luau_type<std::remove_cvref_t<R>>();
 	}
+	return signature;
 }
 
-template <typename R, typename... Args> std::string luau_function_type(R (*)(Args...)) {
-	return luau_signature<R, Args...>();
+template <typename R, typename... Args> LuauSignature luau_signature(R (*)(Args...)) {
+	return make_signature<R, Args...>();
 }
 
 // skips the context parameter, scripts never pass it
-template <typename C, typename R, typename... Args> std::string luau_context_function_type(R (*)(C &, Args...)) {
-	return luau_signature<R, Args...>();
+template <typename C, typename R, typename... Args> LuauSignature luau_context_signature(R (*)(C &, Args...)) {
+	return make_signature<R, Args...>();
 }
 
-template <typename C, typename R, typename... Args> std::string luau_method_type(R (C::*)(Args...), const char *self) {
-	return luau_signature<R, Args...>(self);
+// without self, register_type adds it
+template <typename C, typename R, typename... Args> LuauSignature luau_signature(R (C::*)(Args...)) {
+	return make_signature<R, Args...>();
 }
 
-template <typename C, typename R, typename... Args>
-std::string luau_method_type(R (C::*)(Args...) const, const char *self) {
-	return luau_signature<R, Args...>(self);
+template <typename C, typename R, typename... Args> LuauSignature luau_signature(R (C::*)(Args...) const) {
+	return make_signature<R, Args...>();
 }
 
 } // namespace aquiLua

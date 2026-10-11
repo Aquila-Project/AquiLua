@@ -1,5 +1,0 @@
-{
-	"luau-lsp.types.definitionFiles": {
-		"@aquilua": "sandbox/aquilua.d.luau"
-	}
-}

@@ -58,23 +58,29 @@ class Runtime {
 	bool create_vm();
 	void destroy_vm();
 
-	template <auto Fn> void bind(const std::string &name) {
-		register_function(name, wrapper<Fn>, luau_function_type(Fn));
+	// name is a global, or "module.name" to put it in a native module (see require). doc is shown by luau-lsp
+	template <auto Fn> void bind(const std::string &name, const char *doc = nullptr) {
+		register_function(name, wrapper<Fn>, luau_signature(Fn), doc);
 	}
 
 	// Fn's first parameter (a C &) receives *context
-	template <auto Fn> void bind(const std::string &name, typename ContextOf<decltype(Fn)>::type *context) {
-		register_function(name, wrapper_with_context<Fn>, luau_context_function_type(Fn), context);
+	template <auto Fn>
+	void bind(const std::string &name, typename ContextOf<decltype(Fn)>::type *context, const char *doc = nullptr) {
+		register_function(name, wrapper_with_context<Fn>, luau_context_signature(Fn), doc, context);
 	}
 
 	// each method gets context as upvalue 1. a type can only be registered once
-	template <Userdata T> bool register_type(std::initializer_list<Method> methods, void *context = nullptr) {
-		return register_type(UserType<T>::name, methods, context);
+	template <Userdata T>
+	bool register_type(std::initializer_list<Method> methods, void *context = nullptr, const char *doc = nullptr) {
+		return register_type(UserType<T>::name, methods, context, doc);
 	}
 
-	// Luau declarations of everything bound so far. write them to a file and point luau-lsp at it
-	const std::string &definitions() const { return m_definitions; }
-	bool write_definitions(const std::string &path) const;
+	// require("@name/path") runs directory/path.luau (or directory/path/init.luau) once and returns its result
+	void add_alias(const std::string &name, const std::string &directory) { m_aliases[name] = directory; }
+
+	// Types of everything bound so far, for luau-lsp: globals.d.luau (globals and userdata types, for
+	// luau-lsp.types.definitionFiles) and <module>.luau per native module (for a .luaurc alias named after it)
+	bool write_types(const std::string &directory) const;
 
 	ScriptId load(const std::string &filename);
 	// name only shows up in error messages, e.g. a virtual path
@@ -129,15 +135,27 @@ class Runtime {
 	}
 
   private:
-	void register_function(const std::string &name, lua_CFunction function, const std::string &luau_type,
-						   void *context = nullptr);
-	bool register_type(const std::string &name, std::initializer_list<Method> methods, void *context);
+	// functions bound as "module.name". only modules loaded by require can require them, so a Luau API written on
+	// top of them is all scripts see
+	struct NativeModule {
+		int table = LUA_NOREF;
+		std::string fields; // its Luau type, one line per function
+	};
+
+	void register_function(const std::string &name, lua_CFunction function, const LuauSignature &signature,
+						   const char *doc, void *context = nullptr);
+	bool register_type(const std::string &name, std::initializer_list<Method> methods, void *context, const char *doc);
 
 	void push_function(lua_CFunction function, const char *name, void *context);
+
+	static int require(lua_State *state);
 
 	lua_State *m_state = nullptr;
 	std::unordered_map<uint32_t, int> m_script;
 	uint32_t m_next_id = 0;
 	std::string m_definitions;
+	std::unordered_map<std::string, NativeModule> m_modules;
+	std::unordered_map<std::string, std::string> m_aliases;
+	std::unordered_map<std::string, int> m_required; // file -> what it returned, LUA_NOREF while it runs
 };
 }; // namespace aquiLua
