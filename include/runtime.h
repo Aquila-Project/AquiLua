@@ -72,6 +72,9 @@ class Runtime {
 	ScriptId load(const std::string &filename);
 	// name only shows up in error messages, e.g. a virtual path
 	ScriptId load_source(const std::string &name, std::string_view source);
+	void unload(ScriptId id);
+
+	bool has_function(ScriptId id, const std::string &name);
 
 	template <typename R = void, typename... Args>
 	CallResult<R> call(ScriptId id, const std::string &fct, Args... args) {

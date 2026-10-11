@@ -124,4 +124,27 @@ ScriptId Runtime::load_source(const std::string &name, std::string_view source) 
 	return script_id;
 }
 
+void Runtime::unload(ScriptId id) {
+	auto it = m_script.find(id.id);
+	if (it == m_script.end()) {
+		return;
+	}
+
+	lua_unref(m_state, it->second);
+	m_script.erase(it);
+}
+
+bool Runtime::has_function(ScriptId id, const std::string &name) {
+	auto it = m_script.find(id.id);
+	if (it == m_script.end()) {
+		return false;
+	}
+
+	lua_getref(m_state, it->second); // stack : [M]
+	lua_getfield(m_state, -1, name.c_str()); // stack : [M, value]
+	bool found = lua_isfunction(m_state, -1);
+	lua_pop(m_state, 2); // stack : []
+	return found;
+}
+
 }; // namespace aquiLua
