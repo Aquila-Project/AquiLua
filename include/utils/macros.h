@@ -1,3 +1,15 @@
+/**************************************************************************/
+/*  macros.h                                                              */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                                AQUILUA                                 */
+/*                 Luau scripting for the Aquila Project                  */
+/*               https://github.com/Aquila-Project/AquiLua                */
+/**************************************************************************/
+/* Copyright (c) 2026-present Alexandru DINTE.                            */
+/* Licensed under the MIT License, see LICENSE.md.                        */
+/**************************************************************************/
+
 #pragma once
 
 namespace aquiLua {
