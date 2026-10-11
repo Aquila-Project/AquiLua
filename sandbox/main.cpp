@@ -42,9 +42,7 @@ struct CounterHandle {
 	uint32_t id;
 };
 
-template <> struct aquiLua::UserType<CounterHandle> {
-	static constexpr const char *name = "Counter";
-};
+AQUILUA_USERTYPE(CounterHandle, "Counter");
 
 // turns self (argument 1) into the real Counter. aquiLua::method uses it for every Counter method
 Counter *check_counter(lua_State *state) {
@@ -68,14 +66,13 @@ int main(int args, char **argv) {
 	CounterMap counters;
 	aquiLua::Runtime runtime{};
 
-	runtime.bind<say>("say");
-	runtime.bind<test>("test");
+	AQUILUA_BIND(runtime, say);
+	AQUILUA_BIND(runtime, test);
 
 	counters[1] = Counter{}; // the engine creates the counter before any script sees it
-	runtime.bind<get_counter>("get_counter", &counters);
-	runtime.register_type<CounterHandle>({ luaL_Reg{ "increment", aquiLua::method<check_counter, &Counter::increment> },
-										   luaL_Reg{ "get", aquiLua::method<check_counter, &Counter::get> } },
-										 &counters);
+	AQUILUA_BIND(runtime, get_counter, &counters);
+	runtime.register_type<CounterHandle>(
+		{ AQUILUA_METHOD(check_counter, Counter, increment), AQUILUA_METHOD(check_counter, Counter, get) }, &counters);
 
 	auto id = runtime.load(AQUILUA_ROOT_DIR "/sandbox/main.luau");
 

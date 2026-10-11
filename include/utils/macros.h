@@ -24,4 +24,22 @@ namespace aquiLua {
 			lua_pop((L), 1);                                                                    \
 		}                                                                                       \
 	} while (0)
+
+// AQUILUA_BIND(runtime, say) or AQUILUA_BIND(runtime, get_counter, &counters).
+// the Luau name is the C++ name
+#define AQUILUA_BIND(runtime, fn, ...) (runtime).bind<fn>(#fn __VA_OPT__(, ) __VA_ARGS__)
+
+// AQUILUA_METHOD(check_counter, Counter, increment),
+// for the list given to register_type
+#define AQUILUA_METHOD(resolve, type, fn)        \
+	luaL_Reg {                                   \
+		#fn, aquiLua::method<resolve, &type::fn> \
+	}
+
+// AQUILUA_USERTYPE(CounterHandle, "Counter"), at global scope
+#define AQUILUA_USERTYPE(type, lua_name)              \
+	template <> struct aquiLua::UserType<type> {      \
+		static constexpr const char *name = lua_name; \
+	}
+
 } // namespace aquiLua
