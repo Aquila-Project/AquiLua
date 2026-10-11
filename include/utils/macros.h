@@ -31,10 +31,7 @@ namespace aquiLua {
 
 // AQUILUA_METHOD(check_counter, Counter, increment),
 // for the list given to register_type
-#define AQUILUA_METHOD(resolve, type, fn)        \
-	luaL_Reg {                                   \
-		#fn, aquiLua::method<resolve, &type::fn> \
-	}
+#define AQUILUA_METHOD(resolve, type, fn) aquiLua::make_method<resolve, &type::fn>(#fn)
 
 // AQUILUA_USERTYPE(CounterHandle, "Counter"), at global scope
 #define AQUILUA_USERTYPE(type, lua_name)              \

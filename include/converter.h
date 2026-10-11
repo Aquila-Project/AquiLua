@@ -19,7 +19,10 @@
 namespace aquiLua {
 
 // specialize for value types with their own Luau representation, e.g. a vec3 as a Luau vector:
-//   template <> struct aquiLua::Converter<Vec3> { static void push(...); static Vec3 check(...); static Vec3 get(...); };
+//   template <> struct aquiLua::Converter<Vec3> {
+//       static constexpr const char *luau_type = "vector"; // for the definitions file
+//       static void push(...); static Vec3 check(...); static Vec3 get(...);
+//   };
 template <typename T> struct Converter;
 
 template <typename T>

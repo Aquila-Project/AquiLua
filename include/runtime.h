@@ -24,6 +24,7 @@
 
 #include <fstream>
 #include <optional>
+#include <string>
 #include <initializer_list>
 #include <string_view>
 #include <type_traits>
@@ -57,17 +58,23 @@ class Runtime {
 	bool create_vm();
 	void destroy_vm();
 
-	template <auto Fn> void bind(const std::string &name) { register_function(name, wrapper<Fn>); }
+	template <auto Fn> void bind(const std::string &name) {
+		register_function(name, wrapper<Fn>, luau_function_type(Fn));
+	}
 
 	// Fn's first parameter (a C &) receives *context
 	template <auto Fn> void bind(const std::string &name, typename ContextOf<decltype(Fn)>::type *context) {
-		register_function(name, wrapper_with_context<Fn>, context);
+		register_function(name, wrapper_with_context<Fn>, luau_context_function_type(Fn), context);
 	}
 
 	// each method gets context as upvalue 1. a type can only be registered once
-	template <Userdata T> bool register_type(std::initializer_list<luaL_Reg> methods, void *context = nullptr) {
+	template <Userdata T> bool register_type(std::initializer_list<Method> methods, void *context = nullptr) {
 		return register_type(UserType<T>::name, methods, context);
 	}
+
+	// Luau declarations of everything bound so far. write them to a file and point luau-lsp at it
+	const std::string &definitions() const { return m_definitions; }
+	bool write_definitions(const std::string &path) const;
 
 	ScriptId load(const std::string &filename);
 	// name only shows up in error messages, e.g. a virtual path
@@ -122,13 +129,15 @@ class Runtime {
 	}
 
   private:
-	void register_function(const std::string &name, lua_CFunction function, void *context = nullptr);
-	bool register_type(const std::string &name, std::initializer_list<luaL_Reg> methods, void *context);
+	void register_function(const std::string &name, lua_CFunction function, const std::string &luau_type,
+						   void *context = nullptr);
+	bool register_type(const std::string &name, std::initializer_list<Method> methods, void *context);
 
 	void push_function(lua_CFunction function, const char *name, void *context);
 
 	lua_State *m_state = nullptr;
 	std::unordered_map<uint32_t, int> m_script;
 	uint32_t m_next_id = 0;
+	std::string m_definitions;
 };
 }; // namespace aquiLua

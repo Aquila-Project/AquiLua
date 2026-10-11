@@ -14,8 +14,10 @@
 
 #include "push.h"
 #include "check.h"
+#include "luau_type.h"
 #include "lua.h"
 
+#include <string>
 #include <utility>
 #include <type_traits>
 
@@ -88,6 +90,24 @@ int invoke_method(lua_State *state, R (C::*)(Args...) const) {
 
 template <auto Resolve, auto Fn> int method(lua_State *state) {
 	return invoke_method<Resolve, Fn>(state, Fn);
+}
+
+template <auto Fn> std::string method_type(const char *self) {
+	return luau_method_type(Fn, self);
+}
+
+// an entry for register_type. not an aggregate, so it can only come from make_method (or AQUILUA_METHOD)
+struct Method {
+	Method(const char *name, lua_CFunction func, std::string (*type)(const char *self))
+		: name(name), func(func), type(type) {}
+
+	const char *name;
+	lua_CFunction func;
+	std::string (*type)(const char *self); // its Luau type, once register_type knows self
+};
+
+template <auto Resolve, auto Fn> Method make_method(const char *name) {
+	return { name, method<Resolve, Fn>, method_type<Fn> };
 }
 
 } // namespace aquiLua

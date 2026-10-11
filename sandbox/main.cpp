@@ -74,6 +74,9 @@ int main(int args, char **argv) {
 	runtime.register_type<CounterHandle>(
 		{ AQUILUA_METHOD(check_counter, Counter, increment), AQUILUA_METHOD(check_counter, Counter, get) }, &counters);
 
+	// luau-lsp reads it, see .vscode/settings.json
+	runtime.write_definitions(AQUILUA_ROOT_DIR "/sandbox/aquilua.d.luau");
+
 	auto id = runtime.load(AQUILUA_ROOT_DIR "/sandbox/main.luau");
 
 	auto health = runtime.call<double>(id, "damage", 10);
