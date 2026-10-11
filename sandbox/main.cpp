@@ -19,7 +19,10 @@ int main(int args, char **argv) {
 
 	auto id = runtime.load(AQUILUA_ROOT_DIR "/sandbox/main.luau");
 
-	runtime.call(id, "damage", 10);
+	auto health = runtime.call<double>(id, "damage", 10);
+	if (health) {
+		printf("C++: health is %g\n", *health);
+	}
 
 	return EXIT_SUCCESS;
 }

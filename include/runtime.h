@@ -16,10 +16,13 @@
 #include "luacode.h"
 #include "lualib.h"
 #include "push.h"
+#include "get.h"
 
 #include "utils/macros.h"
 
 #include <fstream>
+#include <optional>
+#include <type_traits>
 #include <unordered_map>
 
 #define INVALID_SCRIPT_ID 0
@@ -31,6 +34,8 @@ struct ScriptId {
 
 	bool is_valid() const { return id != INVALID_SCRIPT_ID; }
 };
+
+template <typename R> using CallResult = std::conditional_t<std::is_void_v<R>, bool, std::optional<R>>;
 
 class Runtime {
   public:
@@ -50,37 +55,49 @@ class Runtime {
 
 	ScriptId load(const std::string &filename);
 
-	template <typename... Args> bool call(ScriptId id, const std::string &fct, Args... args) {
+	template <typename R = void, typename... Args>
+	CallResult<R> call(ScriptId id, const std::string &fct, Args... args) {
 		if (!id.is_valid()) {
 			fprintf(stderr, "Script is not valid.");
-			return false;
+			return {};
 		}
 
 		if (m_state == nullptr) {
 			fprintf(stderr, "State is invalid.");
-			return false;
+			return {};
 		}
 
 		if (!m_script.contains(id.id)) {
-			return false;
+			return {};
 		}
 
 		int ticket = m_script.find(id.id)->second;
+		constexpr int result_count = std::is_void_v<R> ? 0 : 1;
 
-		lua_getref(m_state, ticket);
-		lua_getfield(m_state, -1, fct.c_str());
-		lua_isfunction(m_state, ticket);
-
-		(push(m_state, args), ...);
-		int result = lua_pcall(m_state, sizeof...(Args), 0, 0);
-		if (result != LUA_OK) {
-			fprintf(stderr, "Problem");
-			return false;
+		lua_getref(m_state, ticket); // stack : [M]
+		lua_getfield(m_state, -1, fct.c_str()); // stack : [M, fn]
+		if (!lua_isfunction(m_state, -1)) {
+			fprintf(stderr, "%s is not a function.\n", fct.c_str());
+			lua_pop(m_state, 2); // stack : []
+			return {};
 		}
 
-		lua_pop(m_state, 1);
+		(push(m_state, args), ...); // stack : [M, fn, args...]
+		int result = lua_pcall(m_state, sizeof...(Args), result_count, 0); // stack : [M, results...] or [M, error]
+		if (result != LUA_OK) {
+			fprintf(stderr, "%s\n", lua_tostring(m_state, -1));
+			lua_pop(m_state, 2); // stack : []
+			return {};
+		}
 
-		return true;
+		if constexpr (std::is_void_v<R>) {
+			lua_pop(m_state, 1); // stack : []
+			return true;
+		} else {
+			R value = get<R>(m_state, -1);
+			lua_pop(m_state, 2); // stack : []
+			return value;
+		}
 	}
 
   private:
