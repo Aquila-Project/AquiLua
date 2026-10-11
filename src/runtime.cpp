@@ -75,18 +75,22 @@ void Runtime::destroy_vm() {
 }
 
 ScriptId Runtime::load(const std::string &filename) {
-	ScriptId script_id{};
 	std::ifstream file(filename);
 	if (!file) {
 		fprintf(stderr, "There was an issue opening the file : %s\n", filename.c_str());
-		return script_id;
+		return ScriptId{};
 	}
 
 	std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	return load_source(filename, source);
+}
+
+ScriptId Runtime::load_source(const std::string &name, std::string_view source) {
+	ScriptId script_id{};
 	size_t bytecode_size = 0;
 	char *bytecode = luau_compile(source.data(), source.size(), nullptr, &bytecode_size);
 
-	std::string chunk_name = std::string("@") + filename; // runtime errors will point at the .luau file
+	std::string chunk_name = std::string("@") + name; // runtime errors will point at the .luau file
 	int status = luau_load(m_state, chunk_name.c_str(), bytecode, bytecode_size, 0); // stack : [chunk]
 
 	free(bytecode);
@@ -105,7 +109,7 @@ ScriptId Runtime::load(const std::string &filename) {
 	}
 
 	if (!lua_istable(m_state, -1)) {
-		fprintf(stderr, "%s must return a table of functions (return M).\n", filename.c_str());
+		fprintf(stderr, "%s must return a table of functions (return M).\n", name.c_str());
 		lua_pop(m_state, 1); // stack : []
 		return script_id;
 	}

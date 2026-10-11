@@ -25,6 +25,7 @@
 #include <fstream>
 #include <optional>
 #include <initializer_list>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 
@@ -69,6 +70,8 @@ class Runtime {
 	}
 
 	ScriptId load(const std::string &filename);
+	// name only shows up in error messages, e.g. a virtual path
+	ScriptId load_source(const std::string &name, std::string_view source);
 
 	template <typename R = void, typename... Args>
 	CallResult<R> call(ScriptId id, const std::string &fct, Args... args) {
