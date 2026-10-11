@@ -22,7 +22,10 @@ local function describe(p: Player): string
 end
 
 local player: Player = { name = "hero", health = 100 }
-print("Luau: " .. describe(player))
+print("in luau: " .. describe(player))
+say("C++ function called from Luau",2,3)
+local sum = test(2.54,2.32);
+print("C++ function called from Luau", sum)
 
 local M = {}
 

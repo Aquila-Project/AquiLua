@@ -32,6 +32,11 @@ bool Runtime::create_vm() {
 	return false;
 }
 
+void Runtime::register_function(const std::string &name, lua_CFunction function) {
+	lua_pushcfunction(m_state, function, name.c_str());
+	lua_setglobal(m_state, name.c_str());
+}
+
 void Runtime::destroy_vm() {
 	if (m_state != nullptr) {
 		lua_close(m_state);

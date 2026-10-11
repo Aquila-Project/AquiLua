@@ -15,6 +15,7 @@
 #include "lua.h"
 #include "luacode.h"
 #include "lualib.h"
+#include "binding.h"
 #include "push.h"
 #include "get.h"
 
@@ -52,6 +53,8 @@ class Runtime {
 
 	bool create_vm();
 	void destroy_vm();
+
+	template <auto Fn> void bind(const std::string &name) { register_function(name, wrapper<Fn>); }
 
 	ScriptId load(const std::string &filename);
 
@@ -101,6 +104,8 @@ class Runtime {
 	}
 
   private:
+	void register_function(const std::string &name, lua_CFunction function);
+
 	lua_State *m_state = nullptr;
 	std::unordered_map<uint32_t, int> m_script;
 	uint32_t m_next_id = 0;
